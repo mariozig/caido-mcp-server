@@ -4,6 +4,7 @@ import (
 	"context"
 
 	caido "github.com/caido-community/sdk-go"
+	gen "github.com/caido-community/sdk-go/graphql"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -50,12 +51,25 @@ func listFiltersHandler(
 					ID:     f.Id,
 					Name:   f.Name,
 					Alias:  f.Alias,
-					Clause: f.Clause,
+					Clause: filterPresetClauseToString(f.Clause),
 				},
 			)
 		}
 
 		return nil, output, nil
+	}
+}
+
+func filterPresetClauseToString(
+	clause gen.ListFilterPresetsFilterPresetsFilterPresetClauseQuery,
+) string {
+	switch v := clause.(type) {
+	case *gen.ListFilterPresetsFilterPresetsFilterPresetClauseHTTPQL:
+		return v.Code
+	case *gen.ListFilterPresetsFilterPresetsFilterPresetClauseStreamQL:
+		return v.Code
+	default:
+		return ""
 	}
 }
 

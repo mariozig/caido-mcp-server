@@ -224,7 +224,8 @@ func runBatchFile(cmd *cobra.Command, args []string) error {
 
 	var spec batchFileSpec
 	if err := json.Unmarshal(data, &spec); err != nil {
-		return fmt.Errorf("parse %s: %w", args[0], err)
+		return fmt.Errorf("parse %s: %w\nExpected format: {\"base\": {\"url\": \"...\", \"method\": \"GET\", \"headers\": {}}, \"requests\": [{\"label\": \"...\", \"url\": \"...\"}]}",
+			args[0], err)
 	}
 
 	var reqs []replay.BatchRequest
@@ -321,9 +322,9 @@ func executeBatch(
 
 // printTable outputs a terse table of results.
 func printTable(results []replay.BatchResult) {
-	fmt.Printf("%-15s  %6s  %-30s  %8s  %s\n",
+	fmt.Printf("%-40s  %6s  %-25s  %8s  %s\n",
 		"LABEL", "STATUS", "CONTENT-TYPE", "SIZE", "ERROR")
-	fmt.Println(strings.Repeat("-", 80))
+	fmt.Println(strings.Repeat("-", 100))
 
 	for _, r := range results {
 		ct := ""
@@ -345,10 +346,10 @@ func printTable(results []replay.BatchResult) {
 			}
 		}
 
-		fmt.Printf("%-15s  %6d  %-30s  %6dB  %s\n",
-			truncate(r.Label, 15),
+		fmt.Printf("%-40s  %6d  %-25s  %6dB  %s\n",
+			truncate(r.Label, 40),
 			r.StatusCode,
-			truncate(ct, 30),
+			truncate(ct, 25),
 			size,
 			errStr,
 		)
