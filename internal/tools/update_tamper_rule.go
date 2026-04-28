@@ -18,7 +18,7 @@ type updateTamperRuleVars struct {
 type updateTamperRuleGQLInput struct {
 	Name      string         `json:"name"`
 	Section   map[string]any `json:"section"`
-	Condition *string        `json:"condition,omitempty"`
+	Condition map[string]any `json:"condition,omitempty"`
 	Sources   []gen.Source   `json:"sources"`
 }
 
@@ -97,12 +97,19 @@ func updateTamperRuleHandler(
 			sources = append(sources, gen.Source(s))
 		}
 
+		var cond map[string]any
+		if input.Condition != nil {
+			cond = map[string]any{
+				"HTTPQL": map[string]any{"code": *input.Condition},
+			}
+		}
+
 		vars := &updateTamperRuleVars{
 			ID: input.ID,
 			Input: updateTamperRuleGQLInput{
 				Name:      input.Name,
 				Section:   section,
-				Condition: input.Condition,
+				Condition: cond,
 				Sources:   sources,
 			},
 		}
