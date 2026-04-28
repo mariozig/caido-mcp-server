@@ -76,8 +76,17 @@ func newClient(cmd *cobra.Command) (*caido.Client, error) {
 		if t.RefreshToken == "" {
 			return "", fmt.Errorf("token expired, no refresh token")
 		}
+		// Use a bare client without a token refresher to avoid
+		// infinite recursion: the main client's authTransport
+		// calls this closure, so RefreshAndSave must not go
+		// through the same transport.
+		bareClient, err := caido.NewClient(caido.Options{URL: url})
+		if err != nil {
+			return "", fmt.Errorf("refresh client: %w", err)
+		}
+		bareClient.SetAccessToken(t.AccessToken)
 		stored, err := auth.RefreshAndSave(
-			ctx, client, tokenStore, t.RefreshToken,
+			ctx, bareClient, tokenStore, t.RefreshToken,
 		)
 		if err != nil {
 			return "", err

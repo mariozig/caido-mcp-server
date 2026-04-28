@@ -25,7 +25,7 @@ type createTamperRuleGQLInput struct {
 	CollectionId string         `json:"collectionId"`
 	Name         string         `json:"name"`
 	Section      map[string]any `json:"section"`
-	Condition    *string        `json:"condition,omitempty"`
+	Condition    map[string]any `json:"condition,omitempty"`
 	Sources      []gen.Source   `json:"sources"`
 }
 
@@ -98,12 +98,19 @@ func createTamperRuleHandler(
 			sources = append(sources, gen.Source(s))
 		}
 
+		var cond map[string]any
+		if input.Condition != nil {
+			cond = map[string]any{
+				"HTTPQL": map[string]any{"code": *input.Condition},
+			}
+		}
+
 		vars := &createTamperRuleVars{
 			Input: createTamperRuleGQLInput{
 				CollectionId: input.CollectionID,
 				Name:         input.Name,
 				Section:      section,
-				Condition:    input.Condition,
+				Condition:    cond,
 				Sources:      sources,
 			},
 		}
