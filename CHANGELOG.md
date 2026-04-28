@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- **`caido_update_tamper_rule` MCP tool** - update an existing Match & Replace rule without deleting and recreating it. Uses the same raw GraphQL oneof handling as `caido_create_tamper_rule`.
+
 ## [1.5.0] - 2026-04-09
 
 ### Added

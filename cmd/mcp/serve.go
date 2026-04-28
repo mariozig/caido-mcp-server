@@ -137,6 +137,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 	// Tamper (Match & Replace)
 	tools.RegisterListTamperRulesTool(server, client)
 	tools.RegisterCreateTamperRuleTool(server, client)
+	tools.RegisterUpdateTamperRuleTool(server, client)
 	tools.RegisterToggleTamperRuleTool(server, client)
 	tools.RegisterDeleteTamperRuleTool(server, client)
 
