@@ -29,11 +29,12 @@ type Header struct {
 }
 
 type ParsedMessage struct {
-	FirstLine string   `json:"firstLine,omitempty"`
-	Headers   []Header `json:"headers,omitempty"`
-	Body      string   `json:"body,omitempty"`
-	BodySize  int      `json:"bodySize,omitempty"`
-	Truncated bool     `json:"truncated,omitempty"`
+	FirstLine   string       `json:"firstLine,omitempty"`
+	Headers     []Header     `json:"headers,omitempty"`
+	Body        string       `json:"body,omitempty"`
+	BodySize    int          `json:"bodySize,omitempty"`
+	Truncated   bool         `json:"truncated,omitempty"`
+	Fingerprint *Fingerprint `json:"fingerprint,omitempty"`
 }
 
 func ParseBase64(
@@ -95,6 +96,15 @@ func ParseRaw(
 	}
 
 	result.BodySize = len(bodyPart)
+
+	if len(result.Headers) > 0 {
+		fp := FingerprintFromHeaders(result.Headers, len(bodyPart))
+		result.Fingerprint = &fp
+	} else if len(bodyPart) > 0 {
+		fp := FingerprintFromBody(bodyPart)
+		result.Fingerprint = &fp
+	}
+
 	if includeBody && len(bodyPart) > 0 {
 		if bodyOffset > 0 {
 			if bodyOffset >= len(bodyPart) {

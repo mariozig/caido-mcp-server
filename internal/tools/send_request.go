@@ -37,6 +37,7 @@ type SendRequestOutput struct {
 	RoundtripMs  int                     `json:"roundtripMs,omitempty"`
 	Request      *httputil.ParsedMessage `json:"request,omitempty"`
 	Response     *httputil.ParsedMessage `json:"response,omitempty"`
+	Diff         *httputil.DiffResult    `json:"diff,omitempty"`
 	CookieJar    *CookieJarStatus        `json:"cookieJar,omitempty"`
 	Error        string                  `json:"error,omitempty"`
 }
@@ -264,11 +265,6 @@ func sendRequestHandler(
 
 		output.EntryID = entry.Id
 
-		bodyLimit := input.BodyLimit
-		if bodyLimit == 0 {
-			bodyLimit = httputil.DefaultBodyLimit
-		}
-
 		if entry.Request != nil {
 			output.RequestID = entry.Request.Id
 			output.Request = httputil.ParseBase64(
@@ -278,10 +274,38 @@ func sendRequestHandler(
 				resp := entry.Request.Response
 				output.StatusCode = resp.StatusCode
 				output.RoundtripMs = resp.RoundtripTime
+
+				bodyLimit := input.BodyLimit
+				if bodyLimit == 0 {
+					headersOnly := httputil.ParseBase64(resp.Raw, true, false, 0, 0)
+					if headersOnly != nil && headersOnly.Fingerprint != nil {
+						bodyLimit = httputil.AdaptiveBodyLimit(*headersOnly.Fingerprint, 0)
+					} else {
+						bodyLimit = httputil.DefaultBodyLimit
+					}
+				}
+
 				output.Response = httputil.ParseBase64(
 					resp.Raw, true, true,
 					input.BodyOffset, bodyLimit,
 				)
+
+				// Diff against previous response in same session.
+				if output.Response != nil {
+					digest := httputil.ResponseDigest{
+						StatusCode: resp.StatusCode,
+						BodyHash:   httputil.HashBody([]byte(output.Response.Body)),
+						BodySize:   output.Response.BodySize,
+					}
+					diff := httputil.GlobalResponseCache().GetAndSet(sessionID, digest)
+					if diff != nil {
+						output.Diff = diff
+						if diff.Same {
+							output.Response.Body = ""
+							output.Response.Headers = nil
+						}
+					}
+				}
 
 				// Persist Set-Cookie back into the session jar.
 				if useJar {
