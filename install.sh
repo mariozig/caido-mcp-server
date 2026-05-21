@@ -7,7 +7,17 @@
 set -e
 
 REPO="c0tton-fluff/caido-mcp-server"
-VERSION="v1.5.0"
+
+# Fetch latest release version from GitHub API
+if [ -n "${VERSION:-}" ]; then
+    echo "Using specified version: $VERSION"
+else
+    VERSION=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name"' | cut -d'"' -f4)
+    if [ -z "$VERSION" ]; then
+        echo "Error: could not determine latest version from GitHub"
+        exit 1
+    fi
+fi
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
 TOOL="${TOOL:-mcp}"
 
