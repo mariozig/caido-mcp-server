@@ -13,10 +13,13 @@ import (
 // createTamperRuleVars is the raw GraphQL variable wrapper.
 // We use map[string]any for section because TamperSectionInput
 // and its nested operation/matcher/replacer types are all GraphQL
-// oneofs. genqlient v0.8.1 drops omitempty from nullable pointer
-// fields, causing unset oneof variants to serialize as null.
-// Maps only include keys we set, avoiding oneof violations at
-// every nesting level.
+// oneofs. genqlient v0.8.1 (the latest release as of 2026-06) drops
+// omitempty from nullable pointer fields, causing unset oneof variants
+// to serialize as null. Maps only include keys we set, avoiding oneof
+// violations at every nesting level. This is an upstream genqlient
+// limitation: keep the workaround until a release fixes omitempty on
+// nullable pointer fields in GraphQL oneofs (no such release exists yet;
+// v0.8.1 is current, no v0.9.x). Tracked in .claude/TODO.md.
 type createTamperRuleVars struct {
 	Input createTamperRuleGQLInput `json:"input"`
 }

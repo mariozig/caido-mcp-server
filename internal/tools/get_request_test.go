@@ -3,9 +3,9 @@ package tools_test
 import (
 	"testing"
 
-	caido "github.com/caido-community/sdk-go"
 	"github.com/c0tton-fluff/caido-mcp-server/internal/testutil"
 	"github.com/c0tton-fluff/caido-mcp-server/internal/tools"
+	caido "github.com/caido-community/sdk-go"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -197,52 +197,52 @@ func TestGetRequest_BatchMultipleIDs(t *testing.T) {
 
 func TestGetRequest_TableDrivenIncludeOptions(t *testing.T) {
 	tests := []struct {
-		name            string
-		include         []string
-		expectMetadata  bool
-		expectRequest   bool
-		expectResponse  bool
-		expectedOpName  string
+		name           string
+		include        []string
+		expectMetadata bool
+		expectRequest  bool
+		expectResponse bool
+		expectedOpName string
 	}{
 		{
-			name:            "metadata_only_default",
-			include:         nil,
-			expectMetadata:  true,
-			expectRequest:   false,
-			expectResponse:  false,
-			expectedOpName:  "GetRequestMetadata",
+			name:           "metadata_only_default",
+			include:        nil,
+			expectMetadata: true,
+			expectRequest:  false,
+			expectResponse: false,
+			expectedOpName: "GetRequestMetadata",
 		},
 		{
-			name:            "explicit_metadata",
-			include:         []string{"metadata"},
-			expectMetadata:  true,
-			expectRequest:   false,
-			expectResponse:  false,
-			expectedOpName:  "GetRequestMetadata",
+			name:           "explicit_metadata",
+			include:        []string{"metadata"},
+			expectMetadata: true,
+			expectRequest:  false,
+			expectResponse: false,
+			expectedOpName: "GetRequestMetadata",
 		},
 		{
-			name:            "request_headers",
-			include:         []string{"requestHeaders"},
-			expectMetadata:  false,
-			expectRequest:   true,
-			expectResponse:  false,
-			expectedOpName:  "GetRequest",
+			name:           "request_headers",
+			include:        []string{"requestHeaders"},
+			expectMetadata: false,
+			expectRequest:  true,
+			expectResponse: false,
+			expectedOpName: "GetRequest",
 		},
 		{
-			name:            "response_headers",
-			include:         []string{"responseHeaders"},
-			expectMetadata:  false,
-			expectRequest:   false,
-			expectResponse:  true,
-			expectedOpName:  "GetRequest",
+			name:           "response_headers",
+			include:        []string{"responseHeaders"},
+			expectMetadata: false,
+			expectRequest:  false,
+			expectResponse: true,
+			expectedOpName: "GetRequest",
 		},
 		{
-			name:            "request_and_response_body",
-			include:         []string{"requestBody", "responseBody"},
-			expectMetadata:  false,
-			expectRequest:   true,
-			expectResponse:  true,
-			expectedOpName:  "GetRequest",
+			name:           "request_and_response_body",
+			include:        []string{"requestBody", "responseBody"},
+			expectMetadata: false,
+			expectRequest:  true,
+			expectResponse: true,
+			expectedOpName: "GetRequest",
 		},
 	}
 

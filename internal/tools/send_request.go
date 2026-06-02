@@ -30,16 +30,16 @@ type SendRequestInput struct {
 
 // SendRequestOutput is the output of the send_request tool
 type SendRequestOutput struct {
-	RequestID    string                  `json:"requestId,omitempty"`
-	EntryID      string                  `json:"entryId,omitempty"`
-	SessionID    string                  `json:"sessionId"`
-	StatusCode   int                     `json:"statusCode,omitempty"`
-	RoundtripMs  int                     `json:"roundtripMs,omitempty"`
-	Request      *httputil.ParsedMessage `json:"request,omitempty"`
-	Response     *httputil.ParsedMessage `json:"response,omitempty"`
-	Diff         *httputil.DiffResult    `json:"diff,omitempty"`
-	CookieJar    *CookieJarStatus        `json:"cookieJar,omitempty"`
-	Error        string                  `json:"error,omitempty"`
+	RequestID   string                  `json:"requestId,omitempty"`
+	EntryID     string                  `json:"entryId,omitempty"`
+	SessionID   string                  `json:"sessionId"`
+	StatusCode  int                     `json:"statusCode,omitempty"`
+	RoundtripMs int                     `json:"roundtripMs,omitempty"`
+	Request     *httputil.ParsedMessage `json:"request,omitempty"`
+	Response    *httputil.ParsedMessage `json:"response,omitempty"`
+	Diff        *httputil.DiffResult    `json:"diff,omitempty"`
+	CookieJar   *CookieJarStatus        `json:"cookieJar,omitempty"`
+	Error       string                  `json:"error,omitempty"`
 }
 
 // CookieJarStatus reports cookie-jar activity for a single send.

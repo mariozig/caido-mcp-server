@@ -60,7 +60,16 @@ func (e *MCPTestEnv) CallTool(t *testing.T, name string, args map[string]any) *m
 		Arguments: mustMarshalMap(args),
 	})
 	if err != nil {
-		t.Fatalf("CallTool(%s) error: %v", name, err)
+		// An RPC-level rejection (e.g. JSON-schema "required" validation,
+		// which fires before the handler runs) surfaces here as a transport
+		// error rather than an IsError result. To tests, both mean "the call
+		// did not succeed", so normalize into an IsError result carrying the
+		// error text. This keeps the assertion surface uniform whether the
+		// failure came from the schema layer or the handler.
+		return &mcp.CallToolResult{
+			IsError: true,
+			Content: []mcp.Content{&mcp.TextContent{Text: err.Error()}},
+		}
 	}
 	return result
 }

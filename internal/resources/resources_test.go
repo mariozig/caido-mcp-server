@@ -12,9 +12,9 @@ import (
 )
 
 type resourceTestEnv struct {
-	Mock    *testutil.MockHandler
-	Client  *mcp.ClientSession
-	cancel  context.CancelFunc
+	Mock   *testutil.MockHandler
+	Client *mcp.ClientSession
+	cancel context.CancelFunc
 }
 
 func newResourceTestEnv(t *testing.T) *resourceTestEnv {

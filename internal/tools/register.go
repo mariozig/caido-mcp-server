@@ -109,6 +109,12 @@ var allTools = []registerFunc{
 	// WebSocket History (read)
 	RegisterListWsStreamsTool,
 	RegisterListWsMessagesTool,
+
+	// Utilities
+	RegisterConvertBodyTool,
+
+	// Race-condition testing (bypasses Caido proxy)
+	RegisterRaceWindowSendTool,
 }
 
 // RegisterAll registers every tool on the server and returns the number

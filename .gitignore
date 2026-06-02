@@ -4,6 +4,10 @@ Caido-CLI/caido
 dist/
 *.exe
 
+# Test artifacts
+coverage.out
+*.coverprofile
+
 # IDE
 .idea/
 .vscode/

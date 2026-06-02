@@ -8,6 +8,20 @@ All notable changes to this project will be documented in this file.
 - **WebSocket history (read)** - exposes the WebSocket tab via raw GraphQL (the Go SDK v0.5.0 does not wrap stream queries):
   - `caido_list_ws_streams` - list WebSocket streams (connections), filterable by scope
   - `caido_list_ws_messages` - list frames of a stream with direction (CLIENT/SERVER), format (TEXT/BINARY), and decoded body (base64 `Blob` decoded, truncated to `body_limit`)
+- **`caido_convert_body`** - convert a request body between JSON, form-urlencoded, XML, and multipart/form-data. Pure stdlib; flat objects are lossless, nested JSON uses bracket notation (`a[b]=c`).
+- **`caido_race_window_send`** - fire multiple raw HTTP/1.1 requests with a synchronized last-byte send (single-packet / race-window style) for race-condition testing. Dials targets directly with raw sockets and parks all connections at a barrier before writing final bytes. NOTE: bypasses the Caido proxy, so these requests do not appear in Caido history.
+
+### Changed
+- Tool count 62 -> 64.
+
+### CI
+- **Release workflow** (`.github/workflows/release.yml`) - on a `v*` tag push, cross-compiles both binaries for 6 platforms via `scripts/build.sh`, generates `sha256sums.txt`, and publishes a GitHub Release with assets named to match `install.sh`.
+
+### Tests
+- Test coverage for the `internal/tools` package raised from ~23% to ~70%: new table-driven suites for Findings, Intercept, Workflows, Tamper, Projects/Scopes, Environments/Filters, Replay collections, Automate/Tasks, misc reads, and WebSocket tools. New `internal/httputil/bodyconvert` (92.9%) and `internal/raceattack` (88.0%) suites.
+
+### Internal
+- Documented the genqlient v0.8.1 oneof/omitempty limitation in `create_tamper_rule.go` as an upstream constraint (the `delete_findings`/`export_findings` tools use clean typed structs and need no workaround).
 
 ## [3.0.0] - 2026-05-21
 

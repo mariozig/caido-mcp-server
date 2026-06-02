@@ -10,9 +10,9 @@ func TestExtractPath_Common(t *testing.T) {
 	cases := map[string]string{
 		"GET /admin?id=1 HTTP/1.1\r\nHost: x\r\n\r\n":  "/admin?id=1",
 		"POST /api/v2 HTTP/1.1\r\nHost: x\r\n\r\nbody": "/api/v2",
-		"GET /\r\nHost: x":                             "/",
-		"":                                             "/",
-		"BROKEN":                                       "/",
+		"GET /\r\nHost: x": "/",
+		"":                 "/",
+		"BROKEN":           "/",
 	}
 	for raw, want := range cases {
 		if got := ExtractPath(raw); got != want {
