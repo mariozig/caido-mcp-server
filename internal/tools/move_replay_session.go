@@ -31,13 +31,13 @@ func moveReplaySessionHandler(
 			return nil, MoveReplaySessionOutput{}, fmt.Errorf("move session: %w", err)
 		}
 
-		session := resp.MoveReplaySession.Session
-		if session == nil {
+		if resp.MoveReplaySession.Session == nil {
 			return nil, MoveReplaySessionOutput{}, fmt.Errorf("move session returned nil")
 		}
+		session := *resp.MoveReplaySession.Session
 
 		output := MoveReplaySessionOutput{
-			ID:           session.Id,
+			ID:           session.GetId(),
 			CollectionID: input.CollectionID,
 		}
 

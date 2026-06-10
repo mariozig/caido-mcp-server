@@ -52,8 +52,7 @@ func listWsStreamsHandler(
 		}
 
 		opts := &caido.ListStreamsOptions{
-			First:    &limit,
-			Protocol: gen.StreamProtocolWs,
+			First: &limit,
 		}
 		if input.After != "" {
 			opts.After = &input.After
@@ -75,6 +74,11 @@ func listWsStreamsHandler(
 		}
 		for _, edge := range conn.Edges {
 			n := edge.Node
+			// Caido 0.57 removed the protocol query argument; filter to
+			// WebSocket streams client-side.
+			if n.Protocol != gen.StreamProtocolWs {
+				continue
+			}
 			output.Streams = append(output.Streams, WsStreamSummary{
 				ID:        n.Id,
 				Host:      n.Host,

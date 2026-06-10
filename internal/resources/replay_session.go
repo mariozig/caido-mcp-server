@@ -28,31 +28,29 @@ func replaySessionHandler(client *caido.Client) mcp.ResourceHandler {
 			return nil, mcp.ResourceNotFoundError(req.Params.URI)
 		}
 
-		resp, err := client.Replay.GetSession(ctx, id)
+		s, err := client.Replay.GetSession(ctx, id)
 		if err != nil {
 			return nil, fmt.Errorf("get replay session %s: %w", id, err)
 		}
-		if resp.ReplaySession == nil {
+		if s == nil {
 			return nil, mcp.ResourceNotFoundError(req.Params.URI)
 		}
 
-		s := resp.ReplaySession
 		var b strings.Builder
 		fmt.Fprintf(&b, "# Replay Session: %s\n", s.Name)
-		fmt.Fprintf(&b, "ID: %s\n", s.Id)
+		fmt.Fprintf(&b, "ID: %s\n", s.ID)
 
-		if s.ActiveEntry != nil {
-			fmt.Fprintf(&b, "Active Entry: %s\n", s.ActiveEntry.Id)
+		if s.ActiveEntryID != "" {
+			fmt.Fprintf(&b, "Active Entry: %s\n", s.ActiveEntryID)
 		}
 
-		fmt.Fprintf(&b, "Collection: %s (%s)\n", s.Collection.Name, s.Collection.Id)
+		fmt.Fprintf(&b, "Collection: %s (%s)\n", s.Collection.Name, s.Collection.ID)
 
-		if len(s.Entries.Edges) > 0 {
-			fmt.Fprintf(&b, "\n## Entries (%d)\n", len(s.Entries.Edges))
-			for _, edge := range s.Entries.Edges {
-				e := edge.Node
+		if len(s.Entries) > 0 {
+			fmt.Fprintf(&b, "\n## Entries (%d)\n", len(s.Entries))
+			for _, e := range s.Entries {
 				fmt.Fprintf(&b, "- %s | %s:%d (tls=%t)\n",
-					e.Id, e.Connection.Host, e.Connection.Port, e.Connection.IsTLS,
+					e.ID, e.Connection.Host, e.Connection.Port, e.Connection.IsTLS,
 				)
 			}
 		}

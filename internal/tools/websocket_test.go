@@ -32,6 +32,7 @@ func streamsData(hasNext bool, endCursor string, ids ...string) map[string]any {
 				"isTls":     true,
 				"direction": "BOTH",
 				"source":    "PROXY",
+				"protocol":  "WS",
 				"createdAt": int64(1714900000000),
 			},
 		}

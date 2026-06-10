@@ -2,24 +2,27 @@ package replay
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	caido "github.com/caido-community/sdk-go"
-	gen "github.com/caido-community/sdk-go/graphql"
 )
 
-// SessionPool manages a pool of replay sessions for parallel sends.
-// Each session can only handle one request at a time, so we need N
-// sessions for N concurrent requests.
+// SessionPool bounds concurrency for parallel batch sends and tracks the
+// replay sessions created during the batch so they can be cleaned up.
+//
+// Caido 0.57 replay sessions created without a request source have no
+// entry, and a session's draft can only be updated on an existing entry.
+// Pre-creating empty sessions is therefore useless for sending; instead
+// each batch request creates its own session seeded with its request (see
+// Send). The pool just caps concurrency and records created session IDs.
 type SessionPool struct {
-	client   *caido.Client
-	sessions chan string
-	mu       sync.Mutex
-	created  []string
+	client *caido.Client
+	slots  chan struct{}
+	mu     sync.Mutex
+	ids    []string
 }
 
-// NewSessionPool creates a pool pre-filled with n replay sessions.
+// NewSessionPool creates a pool that allows up to n concurrent sends.
 func NewSessionPool(
 	ctx context.Context, client *caido.Client, n int,
 ) (*SessionPool, error) {
@@ -29,81 +32,51 @@ func NewSessionPool(
 	if n > 50 {
 		n = 50
 	}
-
 	pool := &SessionPool{
-		client:   client,
-		sessions: make(chan string, n),
-		created:  make([]string, 0, n),
+		client: client,
+		slots:  make(chan struct{}, n),
+		ids:    make([]string, 0, n),
 	}
-
-	// Create sessions in parallel, bounded by 5 concurrent creates.
-	type result struct {
-		id  string
-		err error
-	}
-	results := make([]result, n)
-	sem := make(chan struct{}, 5)
-	var wg sync.WaitGroup
-
-	for i := 0; i < n; i++ {
-		wg.Add(1)
-		go func(idx int) {
-			defer wg.Done()
-			sem <- struct{}{}
-			defer func() { <-sem }()
-
-			resp, err := client.Replay.CreateSession(
-				ctx, &gen.CreateReplaySessionInput{},
-			)
-			if err != nil {
-				results[idx] = result{err: err}
-				return
-			}
-			results[idx] = result{
-				id: resp.CreateReplaySession.Session.Id,
-			}
-		}(i)
-	}
-	wg.Wait()
-
-	for _, r := range results {
-		if r.err != nil {
-			return nil, fmt.Errorf("session pool create: %w", r.err)
-		}
-		pool.sessions <- r.id
-		pool.created = append(pool.created, r.id)
-	}
-
 	return pool, nil
 }
 
-// Acquire blocks until a session is available.
-func (p *SessionPool) Acquire(ctx context.Context) (string, error) {
+// Acquire blocks until a concurrency slot is free.
+func (p *SessionPool) Acquire(ctx context.Context) error {
 	select {
-	case id := <-p.sessions:
-		return id, nil
+	case p.slots <- struct{}{}:
+		return nil
 	case <-ctx.Done():
-		return "", ctx.Err()
+		return ctx.Err()
 	}
 }
 
-// Release returns a session to the pool.
-func (p *SessionPool) Release(id string) {
-	p.sessions <- id
+// Release frees a concurrency slot.
+func (p *SessionPool) Release() {
+	<-p.slots
 }
 
-// Size returns the number of sessions created.
+// Track records a created session ID for later cleanup.
+func (p *SessionPool) Track(id string) {
+	if id == "" {
+		return
+	}
+	p.mu.Lock()
+	p.ids = append(p.ids, id)
+	p.mu.Unlock()
+}
+
+// Size returns the number of sessions tracked for cleanup.
 func (p *SessionPool) Size() int {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	return len(p.created)
+	return len(p.ids)
 }
 
-// Cleanup deletes all sessions created by this pool.
+// Cleanup deletes all sessions created during the batch.
 func (p *SessionPool) Cleanup(ctx context.Context) {
 	p.mu.Lock()
-	ids := make([]string, len(p.created))
-	copy(ids, p.created)
+	ids := make([]string, len(p.ids))
+	copy(ids, p.ids)
 	p.mu.Unlock()
 
 	if len(ids) == 0 {

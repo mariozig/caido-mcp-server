@@ -11,7 +11,6 @@ import (
 
 	"github.com/c0tton-fluff/caido-mcp-server/internal/httputil"
 	caido "github.com/caido-community/sdk-go"
-	gen "github.com/caido-community/sdk-go/graphql"
 )
 
 // BatchRequest is a single request in a batch.
@@ -101,13 +100,12 @@ func executeSingle(
 ) BatchResult {
 	result := BatchResult{Label: br.Label}
 
-	// Acquire a session from the pool.
-	sessionID, err := pool.Acquire(ctx)
-	if err != nil {
-		result.Error = fmt.Sprintf("acquire session: %v", err)
+	// Acquire a concurrency slot.
+	if err := pool.Acquire(ctx); err != nil {
+		result.Error = fmt.Sprintf("acquire slot: %v", err)
 		return result
 	}
-	defer pool.Release(sessionID)
+	defer pool.Release()
 
 	// Normalize raw request.
 	raw := httputil.NormalizeCRLF(br.Raw)
@@ -144,32 +142,18 @@ func executeSingle(
 		}
 	}
 
-	// Snapshot previous entry to detect new one.
-	var prevEntryID string
-	sessResp, err := client.Replay.GetSession(ctx, sessionID)
-	if err == nil && sessResp.ReplaySession != nil &&
-		sessResp.ReplaySession.ActiveEntry != nil {
-		prevEntryID = sessResp.ReplaySession.ActiveEntry.Id
-	}
-
+	// Create a session seeded with this request (0.57: a fresh session
+	// has the request as its sole entry, ready to send) and start it.
+	conn := caido.ReplayConnection{Host: host, Port: port, IsTLS: useTLS}
 	rawB64 := base64.StdEncoding.EncodeToString([]byte(raw))
-	taskInput := &gen.StartReplayTaskInput{
-		Connection: gen.ConnectionInfoInput{
-			Host:  host,
-			Port:  port,
-			IsTLS: useTLS,
-		},
-		Raw: rawB64,
-		Settings: gen.ReplayEntrySettingsInput{
-			Placeholders:        []gen.ReplayPlaceholderInput{},
-			UpdateContentLength: true,
-			ConnectionClose:     false,
-		},
-	}
-
-	// Send request.
-	_, err = client.Replay.SendRequest(ctx, sessionID, taskInput)
+	sessionID, _, err := client.Replay.CreateSessionWithRaw(ctx, conn, rawB64)
 	if err != nil {
+		result.Error = fmt.Sprintf("create session: %v", err)
+		return result
+	}
+	pool.Track(sessionID)
+
+	if _, err := client.Replay.StartTask(ctx, sessionID); err != nil {
 		result.Error = fmt.Sprintf("send: %v", err)
 		return result
 	}
@@ -178,7 +162,7 @@ func executeSingle(
 	pollCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
-	entry, err := PollForEntry(pollCtx, client, sessionID, prevEntryID)
+	entry, err := PollForEntry(pollCtx, client, sessionID, "")
 	if err != nil {
 		result.Error = fmt.Sprintf("poll: %v", err)
 		return result

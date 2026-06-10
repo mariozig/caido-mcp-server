@@ -31,26 +31,19 @@ func listReplaySessionsHandler(
 		req *mcp.CallToolRequest,
 		input ListReplaySessionsInput,
 	) (*mcp.CallToolResult, ListReplaySessionsOutput, error) {
-		resp, err := client.Replay.ListSessions(ctx, nil)
+		sessions, err := client.Replay.ListSessionSummaries(ctx, nil)
 		if err != nil {
 			return nil, ListReplaySessionsOutput{}, err
 		}
 
-		conn := resp.ReplaySessions
 		output := ListReplaySessionsOutput{
-			Sessions: make(
-				[]ReplaySessionSummary, 0, len(conn.Edges),
-			),
+			Sessions: make([]ReplaySessionSummary, 0, len(sessions)),
 		}
 
-		for _, edge := range conn.Edges {
-			s := edge.Node
-			summary := ReplaySessionSummary{
-				ID:   s.Id,
-				Name: s.Name,
-			}
-			if s.ActiveEntry != nil {
-				id := s.ActiveEntry.Id
+		for _, s := range sessions {
+			summary := ReplaySessionSummary{ID: s.ID, Name: s.Name}
+			if s.ActiveEntryID != "" {
+				id := s.ActiveEntryID
 				summary.ActiveEntryID = &id
 			}
 			output.Sessions = append(output.Sessions, summary)

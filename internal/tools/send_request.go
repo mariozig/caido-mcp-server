@@ -12,7 +12,6 @@ import (
 	"github.com/c0tton-fluff/caido-mcp-server/internal/httputil"
 	"github.com/c0tton-fluff/caido-mcp-server/internal/replay"
 	caido "github.com/caido-community/sdk-go"
-	gen "github.com/caido-community/sdk-go/graphql"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -48,23 +47,6 @@ type CookieJarStatus struct {
 	InjectedCookies []string `json:"injectedCookies,omitempty"`
 	StoredCookies   []string `json:"storedCookies,omitempty"`
 	Skipped         string   `json:"skipped,omitempty"`
-}
-
-// isTaskInProgress checks whether the error from
-// StartReplayTask is a TaskInProgressUserError.
-func isTaskInProgress(
-	resp *gen.StartReplayTaskResponse,
-) bool {
-	if resp == nil {
-		return false
-	}
-	payload := resp.GetStartReplayTask()
-	errPtr := payload.GetError()
-	if errPtr == nil {
-		return false
-	}
-	_, ok := (*errPtr).(*gen.StartReplayTaskStartReplayTaskStartReplayTaskPayloadErrorTaskInProgressUserError)
-	return ok
 }
 
 // buildRequestURL synthesizes the *url.URL targeted by raw, used for
@@ -187,60 +169,19 @@ func sendRequestHandler(
 			}
 		}
 
-		// Snapshot current active entry
-		var previousEntryID string
-		sessResp, err := client.Replay.GetSession(ctx, sessionID)
-		if err == nil && sessResp.ReplaySession != nil &&
-			sessResp.ReplaySession.ActiveEntry != nil {
-			previousEntryID = sessResp.ReplaySession.ActiveEntry.Id
-		}
-
-		rawBase64 := base64.StdEncoding.EncodeToString([]byte(raw))
-
-		taskInput := &gen.StartReplayTaskInput{
-			Connection: gen.ConnectionInfoInput{
-				Host:  host,
-				Port:  port,
-				IsTLS: useTLS,
-			},
-			Raw: rawBase64,
-			Settings: gen.ReplayEntrySettingsInput{
-				Placeholders:        []gen.ReplayPlaceholderInput{},
-				UpdateContentLength: true,
-				ConnectionClose:     false,
-			},
-		}
-
-		taskResp, err := client.Replay.SendRequest(
-			ctx, sessionID, taskInput,
+		// Send via the 0.57 draft-then-start flow. When the default
+		// session was used, allow Send to replace the cached session on a
+		// busy/empty-session fallback.
+		conn := caido.ReplayConnection{Host: host, Port: port, IsTLS: useTLS}
+		sendRes, err := replay.Send(
+			ctx, client, sessionID, raw, conn, input.SessionID == "",
 		)
-		if err != nil || isTaskInProgress(taskResp) {
-			// Session busy or error - create a new session and retry.
-			newResp, createErr := client.Replay.CreateSession(
-				ctx, &gen.CreateReplaySessionInput{},
+		if err != nil {
+			return nil, SendRequestOutput{}, fmt.Errorf(
+				"failed to send request: %w", err,
 			)
-			if createErr != nil {
-				return nil, SendRequestOutput{}, fmt.Errorf(
-					"failed to create fallback session: %w",
-					createErr,
-				)
-			}
-			sessionID = newResp.CreateReplaySession.Session.Id
-
-			if input.SessionID == "" {
-				replay.ResetDefaultSession(sessionID)
-			}
-
-			previousEntryID = ""
-			_, err = client.Replay.SendRequest(
-				ctx, sessionID, taskInput,
-			)
-			if err != nil {
-				return nil, SendRequestOutput{}, fmt.Errorf(
-					"failed to send request (retry): %w", err,
-				)
-			}
 		}
+		sessionID = sendRes.SessionID
 
 		output := SendRequestOutput{
 			SessionID: sessionID,
@@ -248,25 +189,24 @@ func sendRequestHandler(
 		}
 
 		entry, pollErr := replay.PollForEntry(
-			ctx, client, sessionID, previousEntryID,
+			ctx, client, sessionID, sendRes.PreviousEntryID,
 		)
 		if pollErr != nil {
 			output.Error = fmt.Sprintf(
 				"poll failed: %v (use get_replay_entry to retry)",
 				pollErr,
 			)
-			sResp, sErr := client.Replay.GetSession(ctx, sessionID)
-			if sErr == nil && sResp.ReplaySession != nil &&
-				sResp.ReplaySession.ActiveEntry != nil {
-				output.EntryID = sResp.ReplaySession.ActiveEntry.Id
+			sess, sErr := client.Replay.GetSession(ctx, sessionID)
+			if sErr == nil && sess != nil && sess.ActiveEntryID != "" {
+				output.EntryID = sess.ActiveEntryID
 			}
 			return nil, output, nil
 		}
 
-		output.EntryID = entry.Id
+		output.EntryID = entry.ID
 
 		if entry.Request != nil {
-			output.RequestID = entry.Request.Id
+			output.RequestID = entry.Request.ID
 			output.Request = httputil.ParseBase64(
 				entry.Request.Raw, true, false, 0, 0,
 			)

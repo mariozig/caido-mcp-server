@@ -52,12 +52,17 @@ func TestListReplaySessions(t *testing.T) {
 			name: "lists sessions with and without active entry",
 			mock: listReplaySessionsResponse(
 				map[string]any{
-					"id":          "sess-1",
-					"name":        "auth",
-					"activeEntry": map[string]any{"id": "entry-9"},
-					"collection":  map[string]any{"id": "col-1", "name": "main"},
+					"__typename": "ReplaySessionHttp",
+					"id":         "sess-1",
+					"name":       "auth",
+					"activeEntry": map[string]any{
+						"__typename": "ReplayEntryHttp",
+						"id":         "entry-9",
+					},
+					"collection": map[string]any{"id": "col-1", "name": "main"},
 				},
 				map[string]any{
+					"__typename":  "ReplaySessionHttp",
 					"id":          "sess-2",
 					"name":        "api",
 					"activeEntry": nil,
@@ -385,6 +390,7 @@ func TestMoveReplaySession(t *testing.T) {
 			mock: map[string]any{
 				"moveReplaySession": map[string]any{
 					"session": map[string]any{
+						"__typename": "ReplaySessionHttp",
 						"id":         "sess-1",
 						"name":       "auth",
 						"collection": map[string]any{"id": "col-2", "name": "scratch"},

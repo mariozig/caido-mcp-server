@@ -10,10 +10,22 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+// setupSendMocks wires the Caido 0.57 default-session send flow:
+//  1. GetOrCreateSession creates an empty session (cached).
+//  2. Send -> sendOnSession: GetReplaySession reports no active entry,
+//     so Send falls back to creating a session seeded with the request.
+//  3. StartReplayTask runs the seeded draft.
+//  4. PollForEntry: GetReplaySession reports the new active entry, then
+//     GetReplayEntry returns the response.
 func setupSendMocks(m *testutil.MockHandler, sessionID, entryID, requestID string, statusCode int) {
+	// Empty session created by GetOrCreateSession.
 	m.On("CreateReplaySession", testutil.CreateReplaySessionResponse(sessionID))
-	m.On("GetReplaySession", testutil.GetReplaySessionResponse(sessionID, "prev-entry"))
+	// sendOnSession sees no active entry -> fallback.
+	m.On("GetReplaySession", testutil.GetReplaySessionResponse(sessionID, ""))
+	// Fallback seeded session.
+	m.On("CreateReplaySession", testutil.CreateReplaySessionSeededResponse(sessionID, entryID))
 	m.On("StartReplayTask", testutil.StartReplayTaskResponse())
+	// Poll: new active entry present, then fetch it.
 	m.On("GetReplaySession", testutil.GetReplaySessionResponse(sessionID, entryID))
 	m.On("GetReplayEntry", testutil.GetReplayEntryResponse(entryID, requestID, statusCode, "response body"))
 }
@@ -45,7 +57,10 @@ func TestSendRequest(t *testing.T) {
 				"sessionId": "my-session",
 			},
 			setup: func(m *testutil.MockHandler) {
+				// Provided session already has an active entry, so Send
+				// updates its draft and starts the task (no new session).
 				m.On("GetReplaySession", testutil.GetReplaySessionResponse("my-session", "prev-entry"))
+				m.On("UpdateReplayEntryDraft", testutil.UpdateReplayEntryDraftResponse("prev-entry"))
 				m.On("StartReplayTask", testutil.StartReplayTaskResponse())
 				m.On("GetReplaySession", testutil.GetReplaySessionResponse("my-session", "entry-2"))
 				m.On("GetReplayEntry", testutil.GetReplayEntryResponse("entry-2", "req-2", 301, ""))

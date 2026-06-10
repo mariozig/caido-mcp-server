@@ -2,14 +2,11 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
-	"strings"
 
 	"github.com/c0tton-fluff/caido-mcp-server/internal/httputil"
 	"github.com/c0tton-fluff/caido-mcp-server/internal/replay"
 	caido "github.com/caido-community/sdk-go"
-	gen "github.com/caido-community/sdk-go/graphql"
 )
 
 // sendReplay sends a CRLF-normalized raw HTTP request via the Replay API
@@ -26,67 +23,15 @@ func sendReplay(
 		return "", err
 	}
 
-	var prevEntryID string
-	sessResp, err := client.Replay.GetSession(ctx, sessionID)
-	if err == nil && sessResp.ReplaySession != nil &&
-		sessResp.ReplaySession.ActiveEntry != nil {
-		prevEntryID = sessResp.ReplaySession.ActiveEntry.Id
+	conn := caido.ReplayConnection{Host: host, Port: port, IsTLS: useTLS}
+	sendRes, err := replay.Send(ctx, client, sessionID, raw, conn, true)
+	if err != nil {
+		return "", fmt.Errorf("send: %w", err)
 	}
 
-	rawB64 := base64.StdEncoding.EncodeToString([]byte(raw))
-	taskInput := &gen.StartReplayTaskInput{
-		Connection: gen.ConnectionInfoInput{
-			Host:  host,
-			Port:  port,
-			IsTLS: useTLS,
-		},
-		Raw: rawB64,
-		Settings: gen.ReplayEntrySettingsInput{
-			Placeholders:        []gen.ReplayPlaceholderInput{},
-			UpdateContentLength: true,
-			ConnectionClose:     false,
-		},
-	}
-
-	taskResp, err := client.Replay.SendRequest(
-		ctx, sessionID, taskInput,
+	entry, err := replay.PollForEntry(
+		ctx, client, sendRes.SessionID, sendRes.PreviousEntryID,
 	)
-	hasError := taskResp != nil &&
-		taskResp.StartReplayTask.GetError() != nil
-	if err != nil || hasError {
-		isTaskBusy := false
-		if err != nil {
-			isTaskBusy = strings.Contains(
-				err.Error(), "TaskInProgressUserError",
-			)
-		} else {
-			isTaskBusy = true
-		}
-
-		if isTaskBusy {
-			newResp, createErr := client.Replay.CreateSession(
-				ctx, &gen.CreateReplaySessionInput{},
-			)
-			if createErr != nil {
-				return "", fmt.Errorf(
-					"fallback session: %w", createErr,
-				)
-			}
-			sessionID = newResp.CreateReplaySession.Session.Id
-			replay.ResetDefaultSession(sessionID)
-			prevEntryID = ""
-			_, err = client.Replay.SendRequest(
-				ctx, sessionID, taskInput,
-			)
-			if err != nil {
-				return "", fmt.Errorf("send retry: %w", err)
-			}
-		} else if err != nil {
-			return "", fmt.Errorf("send: %w", err)
-		}
-	}
-
-	entry, err := replay.PollForEntry(ctx, client, sessionID, prevEntryID)
 	if err != nil {
 		return "", err
 	}

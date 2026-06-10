@@ -44,12 +44,11 @@ func getReplayEntryHandler(
 			)
 		}
 
-		resp, err := client.Replay.GetEntry(ctx, input.ID)
+		entry, err := client.Replay.GetEntry(ctx, input.ID, "")
 		if err != nil {
 			return nil, GetReplayEntryOutput{}, err
 		}
 
-		entry := resp.ReplayEntry
 		if entry == nil {
 			return nil, GetReplayEntryOutput{}, fmt.Errorf(
 				"entry not found",
@@ -61,7 +60,7 @@ func getReplayEntryHandler(
 			bodyLimit = httputil.DefaultBodyLimit
 		}
 
-		output := GetReplayEntryOutput{ID: entry.Id}
+		output := GetReplayEntryOutput{ID: entry.ID}
 
 		if entry.Raw != "" {
 			decoded, decErr := base64.StdEncoding.DecodeString(

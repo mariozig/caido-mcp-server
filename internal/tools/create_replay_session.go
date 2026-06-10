@@ -39,29 +39,20 @@ func createReplaySessionHandler(
 			}
 		}
 
-		resp, err := client.Replay.CreateSession(ctx, createInput)
+		sessionID, _, err := client.Replay.CreateSession(ctx, createInput)
 		if err != nil {
 			return nil, CreateReplaySessionOutput{}, fmt.Errorf("create session: %w", err)
 		}
 
-		session := resp.CreateReplaySession.Session
-		if session == nil {
-			return nil, CreateReplaySessionOutput{}, fmt.Errorf("create session returned nil")
-		}
-
-		output := CreateReplaySessionOutput{
-			ID:   session.Id,
-			Name: session.Name,
-		}
+		output := CreateReplaySessionOutput{ID: sessionID}
 
 		if input.Name != "" {
-			renameResp, err := client.Replay.RenameSession(ctx, session.Id, input.Name)
-			if err != nil {
+			if _, err := client.Replay.RenameSession(
+				ctx, sessionID, input.Name,
+			); err != nil {
 				return nil, CreateReplaySessionOutput{}, fmt.Errorf("rename session: %w", err)
 			}
-			if renameResp.RenameReplaySession.Session != nil {
-				output.Name = renameResp.RenameReplaySession.Session.Name
-			}
+			output.Name = input.Name
 		}
 
 		return nil, output, nil
