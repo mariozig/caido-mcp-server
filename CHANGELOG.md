@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.1.0] - 2026-06-16
+
+### Fixed
+- **Caido 0.57.0 compatibility** - 0.57.0 reshaped the replay and filter GraphQL contracts, breaking `caido_send_request`, `caido_edit_request`, batch send, and `caido_create_filter`. Adapted to the new API:
+  - **Replay is now a draft-then-start flow.** `startReplayTask` dropped its `input` arg. Sending updates the active entry's draft on an existing session, or seeds a fresh session via `requestSource.raw` and then starts the task. A 0.57 session created with no request source has no entry, so an empty cached session transparently falls back to a seeded one.
+  - **`ReplaySession` / `ReplayEntry` are now GraphQL interfaces** (HTTP/WS variants). The SDK unwraps them into stable domain structs, so tool/resource code reads plain fields.
+  - **`@oneOf` inputs are strictly enforced** ("exactly one field"). This also broke `caido_create_filter` since `QueryInput` is `@oneOf`; fixed via hand-written `MarshalJSON` on the `@oneOf` inputs in sdk-go.
+  - `streams` swapped its `protocol` arg for a StreamQL `filter`, so `caido_list_ws_streams` now filters to WS client-side.
+
+### Changed (SDK alignment)
+- Bumped `caido-community/sdk-go` to the 0.57-aware build (`f03a805`): regenerated against the 0.57 schema, replay SDK unwraps the interface types into stable domain structs, added the draft/start methods, and the `@oneOf` marshaling fix.
+
+### Tests
+- Test fixtures updated to the 0.57 interface shape (`__typename` on session/entry, seeded-create, update-draft). Added a live MCP-level send test (gated on `CAIDO_IT_URL`) verified end-to-end against a `caido/caido:0.57.0` instance.
+
 ## [4.0.0] - 2026-06-02
 
 ### Added
