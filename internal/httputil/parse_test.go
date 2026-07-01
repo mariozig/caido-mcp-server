@@ -155,7 +155,7 @@ func TestParseRaw_SensitiveHeaderRedaction(t *testing.T) {
 }
 
 func TestParseRaw_SensitiveHeadersAllowedWhenOptedIn(t *testing.T) {
-	t.Setenv("CAIDO_MCP_ALLOW_SENSITIVE", "1")
+	t.Setenv("CAIDO_ALLOW_SENSITIVE_HEADERS", "1")
 	raw := []byte(
 		"GET / HTTP/1.1\r\n" +
 			"Host: example.com\r\n" +
@@ -193,8 +193,8 @@ func TestParseRaw_SensitiveHeadersAllowedWhenOptedIn(t *testing.T) {
 }
 
 func TestParseRaw_SensitiveHeadersRedactedOnInvalidOptIn(t *testing.T) {
-	// An unparseable CAIDO_MCP_ALLOW_SENSITIVE must fail safe: keep redaction.
-	t.Setenv("CAIDO_MCP_ALLOW_SENSITIVE", "definitely-not-a-bool")
+	// An unparseable CAIDO_ALLOW_SENSITIVE_HEADERS must fail safe: keep redaction.
+	t.Setenv("CAIDO_ALLOW_SENSITIVE_HEADERS", "definitely-not-a-bool")
 	raw := []byte(
 		"GET / HTTP/1.1\r\n" +
 			"Authorization: Bearer secret-token\r\n" +

@@ -50,7 +50,7 @@ Both share the same auth token, the same Go SDK, and the same codebase.
 
 **Built-in security and performance:**
 
-- Credential redaction - Authorization, Cookie, and API key headers are redacted in tool output by default; opt out with `CAIDO_MCP_ALLOW_SENSITIVE` (see [Revealing sensitive headers](#revealing-sensitive-headers))
+- Credential redaction - Authorization, Cookie, and API key headers are redacted in tool output by default; opt out with `CAIDO_ALLOW_SENSITIVE_HEADERS` (see [Revealing sensitive headers](#revealing-sensitive-headers))
 - Session cookie jar - RFC 6265 jar per replay session; `Set-Cookie` from a response is auto-attached to the next `send_request` against the same session
 - Response fingerprinting - auto-detects content kind (json/html/xml/text/binary) so agents know what they're dealing with
 - Adaptive body limits - JSON gets 4KB, HTML 3KB, binary 200B (override with explicit `bodyLimit`)
@@ -67,7 +67,7 @@ The output of `caido_send_request` includes a `cookieJar` block with `injectedCo
 
 ### Revealing sensitive headers
 
-By default, sensitive headers (`Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, `X-Api-Key`, `X-Auth-Token`, `X-CSRF-Token`, `X-XSRF-Token`) are replaced with `[REDACTED]` in tool output to avoid leaking credentials into the model context. On an authorized engagement where you need the real values — to analyze or replay a captured authenticated request, or to produce a working `caido_export_curl` PoC — set `CAIDO_MCP_ALLOW_SENSITIVE` to a truthy value (`1`, `true`):
+By default, sensitive headers (`Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, `X-Api-Key`, `X-Auth-Token`, `X-CSRF-Token`, `X-XSRF-Token`) are replaced with `[REDACTED]` in tool output to avoid leaking credentials into the model context. On an authorized engagement where you need the real values — to analyze or replay a captured authenticated request, or to produce a working `caido_export_curl` PoC — set `CAIDO_ALLOW_SENSITIVE_HEADERS` to a truthy value (`1`, `true`):
 
 ```json
 {
@@ -77,7 +77,7 @@ By default, sensitive headers (`Authorization`, `Cookie`, `Set-Cookie`, `Proxy-A
       "args": ["serve"],
       "env": {
         "CAIDO_URL": "http://127.0.0.1:8080",
-        "CAIDO_MCP_ALLOW_SENSITIVE": "true"
+        "CAIDO_ALLOW_SENSITIVE_HEADERS": "true"
       }
     }
   }

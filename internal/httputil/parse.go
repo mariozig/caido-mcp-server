@@ -26,14 +26,14 @@ var sensitiveHeaders = map[string]bool{
 }
 
 // allowSensitiveHeaders reports whether sensitive-header redaction is disabled.
-// Opt in by setting CAIDO_MCP_ALLOW_SENSITIVE to a truthy value accepted by
+// Opt in by setting CAIDO_ALLOW_SENSITIVE_HEADERS to a truthy value accepted by
 // strconv.ParseBool (1, t, T, TRUE, true, True); unset, empty, or unparseable
 // values keep the default redact-everything behavior. Read per ParseRaw call so
 // it stays testable and runtime-configurable. Intended for authorized
 // proxy/pentest work where replaying a captured authenticated request needs its
 // real Authorization/Cookie/CSRF headers.
 func allowSensitiveHeaders() bool {
-	allow, _ := strconv.ParseBool(os.Getenv("CAIDO_MCP_ALLOW_SENSITIVE"))
+	allow, _ := strconv.ParseBool(os.Getenv("CAIDO_ALLOW_SENSITIVE_HEADERS"))
 	return allow
 }
 
